@@ -125,6 +125,9 @@ int main(void)
 		//newTriangle.drawTexture();
 		//newTriangle2.drawTexture();
 
+		
+		firstShader.setInt("texture1", 0);
+
 		cloth.drawCloth();
 
 

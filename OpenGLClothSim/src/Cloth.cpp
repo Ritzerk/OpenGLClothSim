@@ -22,14 +22,19 @@ Cloth::Cloth(float width, float height, float particleSepDistance)				//0.8, 0.4
 	std::cout << "noOfParticlesWidth: " << noOfParticlesWidth << "    NoOfParticlesPosNegX: " << noOfParticlesPosNegX << std::endl;
 	std::cout << "noOfParticlesHeight: " << noOfParticlesHeight << "    NoOfParticlesPosNegY: " << noOfParticlesPosNegY << std::endl;
 
+	int xTex = 0;
+	int yTex = 0;
 
 	//Creating the VBO vector of particles - to be convertex to array later
 	for (int y = -noOfParticlesPosNegY; y <= noOfParticlesPosNegY; y++)
 	{
 		for (int x = -noOfParticlesPosNegX; x <= noOfParticlesPosNegX; x++) {
-			Particle p(glm::vec3(x * particleSepDistance, -y*particleSepDistance, 0.0f));
+			Particle p(glm::vec3(x * particleSepDistance, -y*particleSepDistance, 0.0f), glm::vec2(x/noOfParticlesWidth, -y/noOfParticlesHeight ));
 			particlesVBO.push_back(p);
+			xTex++;
 		}
+		yTex++;
+		xTex = 0;
 	}
 	
 	printParticleVector(particlesVBO);	//Check for accuracy
@@ -58,6 +63,7 @@ Cloth::Cloth(float width, float height, float particleSepDistance)				//0.8, 0.4
 	printIntVector(particlesEBO);	//Check for accuracy	
 
 	createVBO_EBO_VAO();
+	initTexture();
 	
 }
 
@@ -65,8 +71,8 @@ void Cloth::createVBO_EBO_VAO()
 {
 	//first create particlesVBOf which changes data from a particle to vertex, which we need...
 	for (int i = 0; i < particlesVBO.size(); i++) {
-		Vertex pos = { particlesVBO[i].pos };   //Create the vertex
-		particlesVBOf.push_back(pos);			//Place it into our VBO buffer    
+		VertexTex vert = { particlesVBO[i].pos, particlesVBO[i].texCoord };   //Create the vertex
+		particlesVBOf.push_back(vert);			//Place it into our VBO buffer    
 	}
 
 	GLCall(glGenVertexArrays(1, &VAO));
@@ -81,20 +87,26 @@ void Cloth::createVBO_EBO_VAO()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, particlesEBO.size()*sizeof(Vertex), &particlesEBO[0], GL_DYNAMIC_DRAW);
 
-	GLCall(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0));
+	GLCall(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0));
 	GLCall(glEnableVertexAttribArray(0));
+
+	//Do the same for texture
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5* sizeof(float), (void*)(3*sizeof(float)));
+	glEnableVertexAttribArray(1);
+
+
 }
 
 void Cloth::onUpdate() 
 {
 	//Updating particlesVBO and particles VBOf here
 	for (int i = 0; i < particlesVBO.size(); i++) {
-		Vertex pos = { particlesVBO[i].pos };   //Create the vertex
-		particlesVBOf[i] = pos;			//Place it into our VBO buffer    
+		VertexTex vert = { particlesVBO[i].pos, particlesVBO[i].texCoord };   //Create the vertex
+		particlesVBOf[i] = vert;			//Place it into our VBO buffer    
 	}
 }
 
-void Cloth::initTexture(Shader& myShader)
+void Cloth::initTexture()
 {
 	bool textureLoaded = false;
 
@@ -136,8 +148,8 @@ void Cloth::initTexture(Shader& myShader)
 		std::cout << "Image loaded\n";
 	}
 
-	myShader.use();
-	myShader.setInt("texture1", 0);
+	//myShader.use();
+	//myShader.setInt("texture1", 0);
 
 
 }
@@ -169,6 +181,9 @@ bool Cloth::loadTxtOpenGL(GLuint* data, GLuint width, GLuint height)
 
 void Cloth::drawCloth()
 {
+	GLCall(glActiveTexture(GL_TEXTURE0));
+	GLCall(glBindTexture(GL_TEXTURE_2D, textureID));
+
 	GLCall(glBindVertexArray(VAO));
 	GLCall(glDrawElements(GL_TRIANGLE_STRIP, particlesEBO.size(), GL_UNSIGNED_INT, 0 ));
 }

@@ -19,7 +19,7 @@ private:
 
 	//Create the particles - this is what we give to the VBO
 	std::vector<Particle> particlesVBO;
-	std::vector<Vertex> particlesVBOf;
+	std::vector<VertexTex> particlesVBOf;
 
 
 	//Create the layout of the triangles - this is what we give to the EBO
@@ -31,7 +31,7 @@ public:
 	~Cloth();
 
 	void createVBO_EBO_VAO();
-	void initTexture(Shader& myShader);
+	void initTexture();
 	bool loadTxtOpenGL(GLuint* data, GLuint width, GLuint height);
 
 	void drawCloth();
