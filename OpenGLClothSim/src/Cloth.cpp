@@ -8,66 +8,146 @@
 
 Cloth::Cloth(float width, float height, float particleSepDistance)				//0.8, 0.4, 0.1
 {
-	int noOfParticlesWidth  = round(width / particleSepDistance);
-	int noOfParticlesHeight = round(height / particleSepDistance);
+	noOfParticlesWidth  = round(width / particleSepDistance) + 1; //total number of particles will be one higher as there is a particle at 0 as well.
+	noOfParticlesHeight = round(height / particleSepDistance) + 1;
 
 
-	int noOfParticlesPosNegX = noOfParticlesWidth / 2;
-	int noOfParticlesPosNegY = noOfParticlesHeight / 2;
+	std::cout << "noOfParticlesWidth: " << noOfParticlesWidth  << std::endl;
+	std::cout << "noOfParticlesHeight: " << noOfParticlesHeight << std::endl;
 
-	//Assure the correctness of height and width according to how many particles actually fit. 
-	noOfParticlesWidth = noOfParticlesPosNegX*2;
-	noOfParticlesHeight = noOfParticlesPosNegY*2;
-
-	std::cout << "noOfParticlesWidth: " << noOfParticlesWidth << "    NoOfParticlesPosNegX: " << noOfParticlesPosNegX << std::endl;
-	std::cout << "noOfParticlesHeight: " << noOfParticlesHeight << "    NoOfParticlesPosNegY: " << noOfParticlesPosNegY << std::endl;
-
-	int xTex = 0;
-	int yTex = 0;
-
-	//Creating the VBO vector of particles - to be convertex to array later
-	for (int y = -noOfParticlesPosNegY; y <= noOfParticlesPosNegY; y++)
+	//Creating the VBO vector of particles
+	for (int y = noOfParticlesHeight-1; y >= 0; y--)
 	{
-		for (int x = -noOfParticlesPosNegX; x <= noOfParticlesPosNegX; x++) {
-			Particle p(glm::vec3(x * particleSepDistance, -y*particleSepDistance, 0.0f), glm::vec2(x/noOfParticlesWidth, -y/noOfParticlesHeight ));
+		for (int x = 0; x < noOfParticlesWidth; x++) {
+			Particle p(glm::vec3(x * particleSepDistance, y*particleSepDistance, 0.0f), glm::vec2((float)x/(noOfParticlesWidth-1), (float)y/(noOfParticlesHeight-1) ));
 			particlesVBO.push_back(p);
-			xTex++;
 		}
-		yTex++;
-		xTex = 0;
 	}
 	
 	printParticleVector(particlesVBO);	//Check for accuracy
 
-	
-
 	//now have to put the indexes into index buffer - vector that is to be converted to array so that it is easy to work with for now.
+	createEBOvector();
+
+	printIntVector(particlesEBO);	//Check for accuracy	
+
+	initVBO_EBO_VAO();
+	initTexture("./res/Checked_cotton_pxr128_bmp.tif");
+
+	//Create the structural, shear and bending constraints now. How they are linked can be seen on the sheets.
+	createSpringModel();
+	
+	//make corners unmovable to keep the cloth in stable position on the screen, by making first three and last three particles in the corner unmovable.
+	for (int i = 0; i < 3; i++) 
+	{
+		particlesVBO[i].makeStatic();
+		particlesVBO[(noOfParticlesWidth - 1) - i].makeStatic();
+	}
+}
+
+void Cloth::createEBOvector() {
+
 	int firstElementIndexRow2;
 	int row1 = 0;
-	int row2 = noOfParticlesWidth + 1;		
+	int row2 = noOfParticlesWidth;		//the index of the first element of second row is the number of particles of the width, as vector starts at 0
 
-	for (int topRowsNo = 0; topRowsNo < noOfParticlesHeight; topRowsNo++) {			//iterate through the number of top rows of the strip, one less than total rows as we only need to draw triangle that has the bottom indicie.
+	for (int topRowNo = 0; topRowNo < (noOfParticlesHeight - 1); topRowNo++) {			//iterate through the number of top rows of the strip, one less than total rows as we only need to draw triangle that has the bottom indicie.
 		firstElementIndexRow2 = row2;
-		for (int nrPerRow = 0; nrPerRow <= noOfParticlesWidth; nrPerRow++) {
+		for (int nrPerRow = 0; nrPerRow < noOfParticlesWidth; nrPerRow++) {
 			particlesEBO.push_back(row1); //add the first row indexes
 			particlesEBO.push_back(row2);	//add the second row indexes
 			row1++;
 			row2++;
 		}
-		if (topRowsNo < noOfParticlesHeight-1) {		//don't need to have another degenerate if there isn't another triangle strip starting from the bottom indicies. 
-			particlesEBO.push_back(row2-1);
-			particlesEBO.push_back(firstElementIndexRow2);
+		if (topRowNo < (noOfParticlesHeight - 2)) {		//don't need to have another degenerate if there isn't another triangle strip starting from the bottom indicies. 
+			//Add the degenerate triangles
+			particlesEBO.push_back(row2 - 1);							//add the last element of the row
+			particlesEBO.push_back(firstElementIndexRow2);			//add the first element of the row
 		}
 	}
-
-	printIntVector(particlesEBO);	//Check for accuracy	
-
-	createVBO_EBO_VAO();
-	initTexture();
-	
 }
 
-void Cloth::createVBO_EBO_VAO() 
+void Cloth::createSpringModel() {
+
+	for (int y = 0; y < noOfParticlesHeight; y++)
+	{
+		for (int x = 0; x < noOfParticlesWidth; x++)
+		{
+			/*~~~~~~STRUCTURAL SPRINGS~~~~~~*/
+
+			//Link the particles across the row together 
+			if (x < noOfParticlesWidth - 1)   //the last particle isn't to be linked with the particle in the next row. 
+			{
+
+				createConstraint(particlesVBO[getIndexAt(x, y)], particlesVBO[getIndexAt(x + 1, y)]);
+				
+			}
+
+			//Link the particles across the column together
+			if (y < noOfParticlesHeight - 1) //the last row doesn't have a row below it to link to.
+			{
+				createConstraint(particlesVBO[getIndexAt(x, y)], particlesVBO[getIndexAt(x, y + 1)]);
+			}
+
+
+			/*~~~~~SHEAR SPRINGS~~~~~*/
+
+			if (x < noOfParticlesWidth - 1)
+			{
+				//Link the particles across diagonally to the right
+				if (y < noOfParticlesHeight - 1)		//the last element in a row doesn't have a particle to the lower right to link to, and last row doesn't have a next row to link to.
+				{
+					createConstraint(particlesVBO[getIndexAt(x, y)], particlesVBO[getIndexAt(x + 1, y + 1)]);
+				}
+
+				//Link the particles across diagonally to the left
+				if (y < noOfParticlesHeight - 1) {		//the first particle doesn't have a particle to lower left, hence we start at x+1 and have to say x goes up to only noOfParticlesWidth - 1. The last row doesn't have a next row to link to.
+					createConstraint(particlesVBO[getIndexAt(x + 1, y)], particlesVBO[getIndexAt(x, y + 1)]);
+					//std::cout << "Index1: " << index1 << "  Index2: " << index2 << std::endl;  //Check what constraints were created
+				}
+			}
+
+
+			/*~~~~BEND SPRINGS~~~~*/
+
+			//horizontal bends over particle
+			if (x < noOfParticlesWidth - 2) //First bend goes over one particle horizontally to the right, so last two particles in a row don't have any particle to link to
+			{
+				createConstraint(particlesVBO[getIndexAt(x, y)], particlesVBO[getIndexAt(x + 2, y)]);
+			}
+
+			//vertical bends over particle
+			if (y < noOfParticlesHeight - 2) //First bend goes over one particle diagonally, so last two particles in a column don't have any particle to link to
+			{
+				createConstraint(particlesVBO[getIndexAt(x, y)], particlesVBO[getIndexAt(x, y + 2)]);
+
+			}
+
+			//diagonal bends over a particle
+			if (x < noOfParticlesWidth - 2 && y < noOfParticlesHeight - 2)
+			{
+				//bending diagonally to the right over a particle. Last two in a row have nothing to link with,  and last two in column don't have anything to link with either.
+				createConstraint(particlesVBO[getIndexAt(x, y)], particlesVBO[getIndexAt(x + 2, y + 2)]);
+
+				//bending diagonally to the left over a particle. First two don't link, since first particle that links is at x+2, we can't go beyond noOfParticlesWidth-2. The particle it links to is at y+2, so have to take away two in height as well.
+				createConstraint(particlesVBO[getIndexAt(x + 2, y)], particlesVBO[getIndexAt(x, y + 2)]);
+			}
+		}
+	}
+}
+
+int Cloth::getIndexAt(int column, int row)
+{
+	return row * noOfParticlesWidth + column;
+}
+
+void Cloth::createConstraint(Particle &p1, Particle &p2)
+{
+	constraints.push_back(Constraint(p1, p2));
+
+}
+
+void Cloth::initVBO_EBO_VAO() 
 {
 	//first create particlesVBOf which changes data from a particle to vertex, which we need...
 	for (int i = 0; i < particlesVBO.size(); i++) {
@@ -82,10 +162,10 @@ void Cloth::createVBO_EBO_VAO()
 	GLCall(glBindVertexArray(VAO));
 
 	GLCall(glBindBuffer(GL_ARRAY_BUFFER, VBO));
-	GLCall(glBufferData(GL_ARRAY_BUFFER, particlesVBOf.size()*sizeof(Vertex), &particlesVBOf[0], GL_DYNAMIC_DRAW));
+	GLCall(glBufferData(GL_ARRAY_BUFFER, particlesVBOf.size()*sizeof(VertexTex), &particlesVBOf[0], GL_DYNAMIC_DRAW));
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, particlesEBO.size()*sizeof(Vertex), &particlesEBO[0], GL_DYNAMIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, particlesEBO.size()*sizeof(VertexTex), &particlesEBO[0], GL_DYNAMIC_DRAW);
 
 	GLCall(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0));
 	GLCall(glEnableVertexAttribArray(0));
@@ -94,19 +174,43 @@ void Cloth::createVBO_EBO_VAO()
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5* sizeof(float), (void*)(3*sizeof(float)));
 	glEnableVertexAttribArray(1);
 
-
 }
 
-void Cloth::onUpdate() 
+void Cloth::updateVBOf() 
 {
 	//Updating particlesVBO and particles VBOf here
 	for (int i = 0; i < particlesVBO.size(); i++) {
 		VertexTex vert = { particlesVBO[i].pos, particlesVBO[i].texCoord };   //Create the vertex
 		particlesVBOf[i] = vert;			//Place it into our VBO buffer    
 	}
+
 }
 
-void Cloth::initTexture()
+
+
+
+
+
+
+//Method called each frame
+void Cloth::drawCloth(float timeStepSize)
+{
+	addForce(glm::vec3(0,-0.2,0)*timeStepSize); //add gravity each frame, pointing down
+	windForce(glm::vec3(0.5,0,0.2)*timeStepSize); //generate some wind each frame
+	timeStep(); //Calculate the particle positions of the next frame, by resolving the constraints and time step of each particle
+
+	updateVBOf();
+
+	GLCall(glActiveTexture(GL_TEXTURE0));
+	GLCall(glBindTexture(GL_TEXTURE_2D, textureID));
+
+	GLCall(glBindVertexArray(VAO));
+	GLCall(glDrawElements(GL_TRIANGLE_STRIP, particlesEBO.size(), GL_UNSIGNED_INT, 0 ));
+}
+
+
+
+void Cloth::initTexture(std::string filename)
 {
 	bool textureLoaded = false;
 
@@ -118,7 +222,6 @@ void Cloth::initTexture()
 	ilEnable(IL_ORIGIN_SET);
 	ilOriginFunc(IL_ORIGIN_LOWER_LEFT);
 
-	std::string filename = "./res/Red_velvet_pxr128.tif";
 	ILboolean success = ilLoadImage((ILstring)filename.c_str());	//load the image
 
 	// check to see if everything went OK
@@ -178,17 +281,6 @@ bool Cloth::loadTxtOpenGL(GLuint* data, GLuint width, GLuint height)
 }
 
 
-
-void Cloth::drawCloth()
-{
-	GLCall(glActiveTexture(GL_TEXTURE0));
-	GLCall(glBindTexture(GL_TEXTURE_2D, textureID));
-
-	GLCall(glBindVertexArray(VAO));
-	GLCall(glDrawElements(GL_TRIANGLE_STRIP, particlesEBO.size(), GL_UNSIGNED_INT, 0 ));
-}
-
-
 void Cloth::printIntVector(std::vector<GLuint> vec) {
 	int c = 0;
 	for (std::vector<GLuint>::const_iterator i = particlesEBO.begin(); i != particlesEBO.end(); ++i) {
@@ -202,7 +294,7 @@ void Cloth::printParticleVector(std::vector<Particle> vec)
 {
 	int c = 0;
 
-	std::cout << "There are a total of " << vec.size() << " particles along this row. " << std::endl;
+	std::cout << "There are a total of " << vec.size() << " particles in this vector. " << std::endl;
 	for (std::vector<Particle>::const_iterator i = vec.begin(); i != vec.end(); ++i) {
 		std::cout << *i << ", ";
 		if (c++ % 5 == 0 && c != 1)
@@ -212,5 +304,9 @@ void Cloth::printParticleVector(std::vector<Particle> vec)
 }
 
 Cloth::~Cloth() {
-
+	//Clear up
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO);
+	glDeleteBuffers(1, &EBO);
 }
+

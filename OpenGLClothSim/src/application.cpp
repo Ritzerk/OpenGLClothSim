@@ -17,6 +17,8 @@
 #include "triangle.h"
 #include "Cloth.h"
 
+#include "Constraint.h"
+
 void adjustViewportToWindowSize(GLFWwindow* window, int width, int height);
 void checkEsc(GLFWwindow* window);
 void processInput(GLFWwindow* window);
@@ -32,6 +34,7 @@ bool firstMouse = true;
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
+
 
 int main(void)
 {
@@ -93,7 +96,23 @@ int main(void)
 	//newTriangle.initialiseTexture(firstShader);
 	//newTriangle2.initialiseTexture(firstShader);
 
+	/*Particle p1(glm::vec3(0.0f, 0.4f, 0.0f), glm::vec2(0.0f, 1.0f));
+	Particle p2(glm::vec3(0.1f, 0.4f, 0.0f), glm::vec2(0.0f, 1.0f));
 	
+	glm::vec3 p1MinusP2 = p1.getPos() - p2.getPos();
+	glm::vec3 p2MinusP1 = p2.getPos() - p1.getPos();
+
+	std::cout << "p1MinusP2: " << p1MinusP2 << std::endl;
+	std::cout << "p2MinusP1: " << p2MinusP1 << std::endl;*/
+
+	Particle p1(glm::vec3(0.0f, 0.4f, 0.0f), glm::vec2(0.0f, 1.0f));
+	Particle p2(glm::vec3(0.1f, 0.4f, 0.0f), glm::vec2(0.0f, 1.0f));
+
+	Constraint myConst(p1, p2);
+
+	std::cout << "p1 after moving: " << p1.getPos();
+	std::cout << "p2 after moving: " << p2.getPos(); 
+
 
 	Cloth cloth = Cloth(0.8, 0.4, 0.1);	
 
@@ -124,9 +143,6 @@ int main(void)
 		//render our objects
 		//newTriangle.drawTexture();
 		//newTriangle2.drawTexture();
-
-		
-		firstShader.setInt("texture1", 0);
 
 		cloth.drawCloth();
 

@@ -18,16 +18,22 @@ public:
 	virtual ~Particle();
 
 	bool isStatic;
-	glm::vec3 normal;
+	glm::vec3 acceleration;
 	glm::vec3 pos;
 	glm::vec3 lastPos;
 	glm::vec2 texCoord;
+
 	float damping;
+
 	float mass;
 	glm::vec3 force;
 
+	void makeStatic();
 	void move(glm::vec3 delta);
-	void step(float timeStep);
+	void addForce(glm::vec3 force);
+	void timeStep(float timeStepSize);
+
+	glm::vec3 getPos();
 
 	friend std::ostream& operator<<(std::ostream& os, const Particle& particle);			//enable cout to output a particle position
 

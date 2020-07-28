@@ -15,3 +15,11 @@ bool GLLogCall(const char* function, const char* file, int line) {
     return true;
 }
  
+
+std::ostream& operator<< (std::ostream& out, const glm::vec3& vec) {
+    out << "{"
+        << vec.x << ", " << vec.y << ", " << vec.z
+        << "}";
+
+    return out;
+}

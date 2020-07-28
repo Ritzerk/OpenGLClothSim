@@ -1,6 +1,10 @@
 #pragma once
 
 #include <glad/glad.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <iostream>
 
 //let us break on the exact line, and then return useful information to the console using LGLogCall
@@ -12,3 +16,5 @@
 void GLClearError();
 
 bool GLLogCall(const char* function, const char* file, int line);
+
+std::ostream& operator<< (std::ostream & out, const glm::vec3 & vec);
