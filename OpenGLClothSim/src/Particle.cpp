@@ -45,6 +45,7 @@ Particle::Particle(glm::vec3 pos) {
 Particle::Particle(glm::vec3 pos, glm::vec2 texCoord) 
 {
 	this->pos = pos;
+	this->lastPos = pos;
 	this->texCoord = texCoord;
 
 	this->mass = 1;
