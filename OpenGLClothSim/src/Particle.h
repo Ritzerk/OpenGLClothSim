@@ -31,9 +31,9 @@ public:
 	void makeStatic();
 	void move(glm::vec3 delta);
 	void addForce(glm::vec3 force);
-	void timeStep(float timeStepSize);
+	void calcMovement(float timeStepSize);
 
-	glm::vec3 getPos();
+	glm::vec3& getPos();
 
 	friend std::ostream& operator<<(std::ostream& os, const Particle& particle);			//enable cout to output a particle position
 

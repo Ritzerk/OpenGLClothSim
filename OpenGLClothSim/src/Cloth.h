@@ -35,6 +35,7 @@ private:
 
 public:
 	Cloth(float width, float height, float particleSepDistance);
+	Cloth(float width, float height, int noOfParticlesW, int noOfParticlesH);
 	~Cloth();
 
 	void createEBOvector();
@@ -46,13 +47,25 @@ public:
 
 
 	int getIndexAt(int x, int y);
-	void createConstraint(Particle &p1, Particle &p2);
+	void createConstraint(Particle *p1, Particle *p2);
 
+	void addGravity(const glm::vec3 direction);
+	void addWind(const glm::vec3 direction);
+
+	void detPositioning(float timeStepSize);
 	void drawCloth(float timeStepSize);
+	
 	void updateVBOf();
 
 	void printIntVector(std::vector<GLuint> vec);
 	void printParticleVector(std::vector<Particle> vec);
+	void normalizeVector(std::vector<Particle> pVector);
+
+
+
+	//temporary functions?
+	glm::vec3 calcTriangleNormal(Particle *p1, Particle *p2, Particle *p3);
+	void triangleWindForce(Particle *p1, Particle *p2, Particle *p3, const glm::vec3 direction);
 	
 
 };

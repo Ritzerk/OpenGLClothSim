@@ -27,7 +27,7 @@ Particle::Particle(glm::vec3 pos, float mass, float damping, glm::vec2 texCoord)
 	isStatic = false;
 }
 
-glm::vec3 Particle::getPos() 
+glm::vec3& Particle::getPos() 
 {
 	return pos;
 }
@@ -84,7 +84,8 @@ void Particle::addForce(glm::vec3 force)
 	acceleration += force/mass;
 }
 
-void Particle::timeStep(float timeStepSize) {
+//Calculates the position of the particle on this iteration of graphics
+void Particle::calcMovement(float timeStepSize) {
 	if (isStatic) return;
 
 	//apply force

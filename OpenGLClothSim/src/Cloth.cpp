@@ -1,7 +1,7 @@
 //glm::mat4 transform = glm::translate(glm::vec3(-50, 20, 25)) * glm::rotate(30.f, glm::vec3(1, 0, 0));
 //cloth = new Cloth(100, 50, 100, 50, 100, 0.01, transform);
 
-
+#include <glm/gtx/normal.hpp>
 #include "Cloth.h"
 
 
@@ -20,16 +20,17 @@ Cloth::Cloth(float width, float height, float particleSepDistance)				//0.8, 0.4
 	{
 		for (int x = 0; x < noOfParticlesWidth; x++) {
 			Particle p(glm::vec3(x * particleSepDistance, y*particleSepDistance, 0.0f), glm::vec2((float)x/(noOfParticlesWidth-1), (float)y/(noOfParticlesHeight-1) ));
+			//Particle p(glm::vec3(width*(x/(float)noOfParticlesWidth), -height*(y/noOfParticlesHeight), 0.0f), glm::vec2((float)x/(noOfParticlesWidth-1), (float)y/(noOfParticlesHeight-1) ));
 			particlesVBO.push_back(p);
 		}
 	}
-	
-	printParticleVector(particlesVBO);	//Check for accuracy
+
+	//printParticleVector(particlesVBO);	//Check for accuracy
 
 	//now have to put the indexes into index buffer - vector that is to be converted to array so that it is easy to work with for now.
 	createEBOvector();
 
-	printIntVector(particlesEBO);	//Check for accuracy	
+	//printIntVector(particlesEBO);	//Check for accuracy	
 
 	initVBO_EBO_VAO();
 	initTexture("./res/Checked_cotton_pxr128_bmp.tif");
@@ -44,6 +45,8 @@ Cloth::Cloth(float width, float height, float particleSepDistance)				//0.8, 0.4
 		particlesVBO[(noOfParticlesWidth - 1) - i].makeStatic();
 	}
 }
+
+
 
 void Cloth::createEBOvector() {
 
@@ -79,14 +82,14 @@ void Cloth::createSpringModel() {
 			if (x < noOfParticlesWidth - 1)   //the last particle isn't to be linked with the particle in the next row. 
 			{
 
-				createConstraint(particlesVBO[getIndexAt(x, y)], particlesVBO[getIndexAt(x + 1, y)]);
+				createConstraint(&particlesVBO[getIndexAt(x, y)], &particlesVBO[getIndexAt(x + 1, y)]);
 				
 			}
 
 			//Link the particles across the column together
 			if (y < noOfParticlesHeight - 1) //the last row doesn't have a row below it to link to.
 			{
-				createConstraint(particlesVBO[getIndexAt(x, y)], particlesVBO[getIndexAt(x, y + 1)]);
+				createConstraint(&particlesVBO[getIndexAt(x, y)], &particlesVBO[getIndexAt(x, y + 1)]);
 			}
 
 
@@ -97,12 +100,12 @@ void Cloth::createSpringModel() {
 				//Link the particles across diagonally to the right
 				if (y < noOfParticlesHeight - 1)		//the last element in a row doesn't have a particle to the lower right to link to, and last row doesn't have a next row to link to.
 				{
-					createConstraint(particlesVBO[getIndexAt(x, y)], particlesVBO[getIndexAt(x + 1, y + 1)]);
+					createConstraint(&particlesVBO[getIndexAt(x, y)], &particlesVBO[getIndexAt(x + 1, y + 1)]);
 				}
 
 				//Link the particles across diagonally to the left
 				if (y < noOfParticlesHeight - 1) {		//the first particle doesn't have a particle to lower left, hence we start at x+1 and have to say x goes up to only noOfParticlesWidth - 1. The last row doesn't have a next row to link to.
-					createConstraint(particlesVBO[getIndexAt(x + 1, y)], particlesVBO[getIndexAt(x, y + 1)]);
+					createConstraint(&particlesVBO[getIndexAt(x + 1, y)], &particlesVBO[getIndexAt(x, y + 1)]);
 					//std::cout << "Index1: " << index1 << "  Index2: " << index2 << std::endl;  //Check what constraints were created
 				}
 			}
@@ -113,13 +116,13 @@ void Cloth::createSpringModel() {
 			//horizontal bends over particle
 			if (x < noOfParticlesWidth - 2) //First bend goes over one particle horizontally to the right, so last two particles in a row don't have any particle to link to
 			{
-				createConstraint(particlesVBO[getIndexAt(x, y)], particlesVBO[getIndexAt(x + 2, y)]);
+				createConstraint(&particlesVBO[getIndexAt(x, y)], &particlesVBO[getIndexAt(x + 2, y)]);
 			}
 
 			//vertical bends over particle
 			if (y < noOfParticlesHeight - 2) //First bend goes over one particle diagonally, so last two particles in a column don't have any particle to link to
 			{
-				createConstraint(particlesVBO[getIndexAt(x, y)], particlesVBO[getIndexAt(x, y + 2)]);
+				createConstraint(&particlesVBO[getIndexAt(x, y)], &particlesVBO[getIndexAt(x, y + 2)]);
 
 			}
 
@@ -127,10 +130,10 @@ void Cloth::createSpringModel() {
 			if (x < noOfParticlesWidth - 2 && y < noOfParticlesHeight - 2)
 			{
 				//bending diagonally to the right over a particle. Last two in a row have nothing to link with,  and last two in column don't have anything to link with either.
-				createConstraint(particlesVBO[getIndexAt(x, y)], particlesVBO[getIndexAt(x + 2, y + 2)]);
+				createConstraint(&particlesVBO[getIndexAt(x, y)], &particlesVBO[getIndexAt(x + 2, y + 2)]);
 
 				//bending diagonally to the left over a particle. First two don't link, since first particle that links is at x+2, we can't go beyond noOfParticlesWidth-2. The particle it links to is at y+2, so have to take away two in height as well.
-				createConstraint(particlesVBO[getIndexAt(x + 2, y)], particlesVBO[getIndexAt(x, y + 2)]);
+				createConstraint(&particlesVBO[getIndexAt(x + 2, y)], &particlesVBO[getIndexAt(x, y + 2)]);
 			}
 		}
 	}
@@ -141,7 +144,7 @@ int Cloth::getIndexAt(int column, int row)
 	return row * noOfParticlesWidth + column;
 }
 
-void Cloth::createConstraint(Particle &p1, Particle &p2)
+void Cloth::createConstraint(Particle *p1, Particle *p2)
 {
 	constraints.push_back(Constraint(p1, p2));
 
@@ -178,26 +181,82 @@ void Cloth::initVBO_EBO_VAO()
 
 void Cloth::updateVBOf() 
 {
-	//Updating particlesVBO and particles VBOf here
+	//printParticleVector(particlesVBO);
+
 	for (int i = 0; i < particlesVBO.size(); i++) {
 		VertexTex vert = { particlesVBO[i].pos, particlesVBO[i].texCoord };   //Create the vertex
-		particlesVBOf[i] = vert;			//Place it into our VBO buffer    
+		particlesVBOf[i] = vert;			//Place it into our VBO buffer; instead of push_back, now can actually replace the values since the size of particlesVBOf should be the same of that of particlesVBO. 
 	}
+
+	//printParticleVector(particlesVBO);
+
 
 }
 
+//A function to determine the positioning of every particle within the cloth.
+void Cloth::detPositioning(float timeStepSize) {
+	//first we need to satisfy the constraints in order to determine the positioning. 
+	for (int i = 0; i < 20; i++)
+	{
+		for (std::vector<Constraint>::iterator constraint = constraints.begin(); constraint != constraints.end(); constraint++)
+		{
+			(*constraint).satisfyConstraint();
+		}
+	}
+
+	for (std::vector<Particle>::iterator particle = particlesVBO.begin(); particle != particlesVBO.end(); particle++)
+	{
+		(*particle).calcMovement(timeStepSize);
+	}
+}
+
+void Cloth::addGravity(const glm::vec3 direction)
+{
+	for (std::vector<Particle>::iterator particle = particlesVBO.begin(); particle != particlesVBO.end(); particle++)
+	{
+		(*particle).addForce(direction);
+	}
+}
+
+glm::vec3 Cloth::calcTriangleNormal(Particle* p1, Particle* p2, Particle* p3)
+{
+	glm::vec3 pos1 = p1->getPos();
+	glm::vec3 pos2 = p2->getPos();
+	glm::vec3 pos3 = p3->getPos();
+
+	return glm::cross(pos3 - pos1, pos2 - pos1);
+}
 
 
+void Cloth::triangleWindForce(Particle* p1, Particle* p2, Particle* p3, const glm::vec3 direction)
+{
+	glm::vec3 normal = calcTriangleNormal(p1, p2, p3);
+	glm::vec3 normalized = glm::normalize(normal);
+	glm::vec3 force = normal * (glm::dot(normalized, direction));
 
+	p1->addForce(force);
+	p2->addForce(force);
+	p3->addForce(force);
+}
 
-
+void Cloth::addWind(glm::vec3 direction)
+{
+	for (int x = 0; x < noOfParticlesWidth - 1; x++)
+	{
+		for (int y = 0; y < noOfParticlesHeight - 1; y++)
+		{
+			triangleWindForce(&particlesVBO[getIndexAt(x+1,y)], &particlesVBO[getIndexAt(x, y)], &particlesVBO[getIndexAt(x, y+1)], direction);
+			triangleWindForce(&particlesVBO[getIndexAt(x + 1, y+1)], &particlesVBO[getIndexAt(x + 1, y)], &particlesVBO[getIndexAt(x, y+1)], direction);
+		}
+	}
+}
 
 //Method called each frame
 void Cloth::drawCloth(float timeStepSize)
 {
-	addForce(glm::vec3(0,-0.2,0)*timeStepSize); //add gravity each frame, pointing down
-	windForce(glm::vec3(0.5,0,0.2)*timeStepSize); //generate some wind each frame
-	timeStep(); //Calculate the particle positions of the next frame, by resolving the constraints and time step of each particle
+	addGravity(glm::vec3(0,-0.2,0)*timeStepSize); //addGravity: add gravity to every particle each frame, pointing down
+	addWind(glm::vec3(0.5,0,0.2)*timeStepSize); //addWind: generate some wind each frame
+	detPositioning(timeStepSize); //Calculate the particle positions of the next frame, by resolving the constraints and time step of each particle
 
 	updateVBOf();
 
@@ -205,6 +264,9 @@ void Cloth::drawCloth(float timeStepSize)
 	GLCall(glBindTexture(GL_TEXTURE_2D, textureID));
 
 	GLCall(glBindVertexArray(VAO));
+	//GLCall(glBindBuffer(GL_ARRAY_BUFFER, VBO));
+	//GLCall(glBufferData(GL_ARRAY_BUFFER, particlesVBOf.size() * sizeof(VertexTex), &particlesVBOf[0], GL_DYNAMIC_DRAW));
+
 	GLCall(glDrawElements(GL_TRIANGLE_STRIP, particlesEBO.size(), GL_UNSIGNED_INT, 0 ));
 }
 
@@ -293,14 +355,22 @@ void Cloth::printIntVector(std::vector<GLuint> vec) {
 void Cloth::printParticleVector(std::vector<Particle> vec)
 {
 	int c = 0;
-
-	std::cout << "There are a total of " << vec.size() << " particles in this vector. " << std::endl;
+	std::cout << "This is what the current vector contains in this frame: " << std::endl;
 	for (std::vector<Particle>::const_iterator i = vec.begin(); i != vec.end(); ++i) {
 		std::cout << *i << ", ";
 		if (c++ % 5 == 0 && c != 1)
 			std::cout << std::endl;
 	}
 	std::cout << std::endl << std::endl;
+
+}
+
+void Cloth::normalizeVector(std::vector<Particle> pVector)
+{
+	for (std::vector<Particle>::iterator particle = particlesVBO.begin(); particle != particlesVBO.end(); particle++)
+	{
+		(*particle).pos = glm::normalize((*particle).getPos());
+	}
 }
 
 Cloth::~Cloth() {

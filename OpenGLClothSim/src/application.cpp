@@ -20,6 +20,8 @@
 #include "Constraint.h"
 
 void adjustViewportToWindowSize(GLFWwindow* window, int width, int height);
+void setVSync(bool enabled);
+
 void checkEsc(GLFWwindow* window);
 void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -58,6 +60,7 @@ int main(void)
 		return -1; 
 	}
 
+	setVSync(true);	//disable VSync. 
 	glEnable(GL_DEPTH_TEST);
 
 	glViewport(0, 0, 800, 600);	//size of GL rendering window. 
@@ -75,43 +78,9 @@ int main(void)
 	Shader firstShader("shaders/firstShader.vs", "shaders/firstShader.fs");
 
 
-	glm::mat4 identityMatrix = glm::mat4(1.0f); //this creates an identity matrix
-
 	glm::mat4 model = glm::mat4(1.0f);
 	glm::mat4 projection = glm::mat4(1.0f);
 	glm::mat4 view = glm::mat4(1.0f);
-
-	/*
-	Particle p1(glm::vec3(-0.4f, 0.2f, 0.0f), glm::vec2(0.0f, 1.0f));
-	Particle p2(glm::vec3(-0.2f, 0.2f, 0.0f), glm::vec2(1.0f, 1.0f));
-	Particle p3(glm::vec3(-0.4f, 0.0f, 0.0f), glm::vec2(0.0f, 0.0f));
-	Triangle newTriangle(p1, p2, p3);
-
-	Particle p4(glm::vec3(-0.4f, 0.0f, 0.0f), glm::vec2(0.0f, 0.0f));
-	Particle p5(glm::vec3(-0.2f, 0.0f, 0.0f), glm::vec2(1.0f, 0.0f));
-	Particle p6(glm::vec3(-0.2f, 0.2f, 0.0f), glm::vec2(1.0f, 1.0f));
-	Triangle newTriangle2(p4, p5, p6);
-	*/
-
-	//newTriangle.initialiseTexture(firstShader);
-	//newTriangle2.initialiseTexture(firstShader);
-
-	/*Particle p1(glm::vec3(0.0f, 0.4f, 0.0f), glm::vec2(0.0f, 1.0f));
-	Particle p2(glm::vec3(0.1f, 0.4f, 0.0f), glm::vec2(0.0f, 1.0f));
-	
-	glm::vec3 p1MinusP2 = p1.getPos() - p2.getPos();
-	glm::vec3 p2MinusP1 = p2.getPos() - p1.getPos();
-
-	std::cout << "p1MinusP2: " << p1MinusP2 << std::endl;
-	std::cout << "p2MinusP1: " << p2MinusP1 << std::endl;*/
-
-	Particle p1(glm::vec3(0.0f, 0.4f, 0.0f), glm::vec2(0.0f, 1.0f));
-	Particle p2(glm::vec3(0.1f, 0.4f, 0.0f), glm::vec2(0.0f, 1.0f));
-
-	Constraint myConst(p1, p2);
-
-	std::cout << "p1 after moving: " << p1.getPos();
-	std::cout << "p2 after moving: " << p2.getPos(); 
 
 
 	Cloth cloth = Cloth(0.8, 0.4, 0.1);	
@@ -120,8 +89,10 @@ int main(void)
 	while (!glfwWindowShouldClose(window))
 	{
 		float currentFrame = (float)glfwGetTime();
-		deltaTime = currentFrame - lastFrame;
+		deltaTime = currentFrame - lastFrame;            //the time it took to render frame
 		lastFrame = currentFrame;
+
+		//std::cout << "Delta time: " << deltaTime << std::endl;
 
 		processInput(window);
 		glfwSetScrollCallback(window, scroll_callback);
@@ -140,12 +111,7 @@ int main(void)
 		firstShader.setMatrix4fv("projection", glm::value_ptr(projection));
 		firstShader.setMatrix4fv("view", glm::value_ptr(view));
 
-		//render our objects
-		//newTriangle.drawTexture();
-		//newTriangle2.drawTexture();
-
-		cloth.drawCloth();
-
+		cloth.drawCloth(deltaTime);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -206,4 +172,16 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	camera.ProcessMouseScroll(yoffset);
+}
+
+void setVSync(bool enabled)
+{
+	if (enabled)
+	{
+		glfwSwapInterval(1);
+	}
+	else 
+	{
+		glfwSwapInterval(0);
+	}
 }
