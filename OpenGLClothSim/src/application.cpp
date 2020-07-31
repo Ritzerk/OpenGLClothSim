@@ -19,6 +19,10 @@
 
 #include "Constraint.h"
 
+GLuint timeStep = 1000 / 60;
+
+extern "C" { _declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1; }     //run on discrete GPU
+
 void adjustViewportToWindowSize(GLFWwindow* window, int width, int height);
 void setVSync(bool enabled);
 
@@ -61,7 +65,7 @@ int main(void)
 	}
 
 	setVSync(true);	//disable VSync. 
-	glEnable(GL_DEPTH_TEST);
+	
 
 	glViewport(0, 0, 800, 600);	//size of GL rendering window. 
 	glfwSetFramebufferSizeCallback(window, adjustViewportToWindowSize);		//Viewport needs to be resized everytime user resizes window, this is done using a callback. 
@@ -83,13 +87,14 @@ int main(void)
 	glm::mat4 view = glm::mat4(1.0f);
 
 
-	Cloth cloth = Cloth(0.8, 0.4, 0.1);	
+	Cloth cloth = Cloth(0.8, 0.4, 0.016);	
 
 
 	while (!glfwWindowShouldClose(window))
 	{
 		float currentFrame = (float)glfwGetTime();
-		deltaTime = currentFrame - lastFrame;            //the time it took to render frame
+		//deltaTime = currentFrame - lastFrame;            //the time it took to render frame
+		deltaTime = 0.5f;
 		lastFrame = currentFrame;
 
 		//std::cout << "Delta time: " << deltaTime << std::endl;
@@ -99,11 +104,11 @@ int main(void)
 
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);    //calling glClear sets the background to color values set by glClearColor function.
-
+		glEnable(GL_DEPTH_TEST);
 
 		firstShader.use();
 
-		projection = glm::perspective(glm::radians(camera.Fov), 800.0f / 600.0f, 0.1f, 100.0f); 
+		projection = glm::perspective(glm::radians(camera.Fov), 800.0f / 600.0f, 0.1f, 100.0f);    // (20*M_PI/180), width, height, 1.0f, 1000.0f
 		view = camera.GetViewMatrix();
 		
 
@@ -111,6 +116,7 @@ int main(void)
 		firstShader.setMatrix4fv("projection", glm::value_ptr(projection));
 		firstShader.setMatrix4fv("view", glm::value_ptr(view));
 
+		
 		cloth.drawCloth(deltaTime);
 
 		glfwSwapBuffers(window);

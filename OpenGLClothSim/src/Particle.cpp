@@ -91,7 +91,7 @@ void Particle::calcMovement(float timeStepSize) {
 
 	//apply force
 	glm::vec3 tempPos = pos;
-	pos = pos + (pos - lastPos) * damping + acceleration * timeStepSize;		//  f/m is acceleration. timeStep id dt which is the change in time. 
+	pos = pos + (pos - lastPos) * damping + acceleration * (timeStepSize/100);		//  f/m is acceleration. timeStep id dt which is the change in time. 
 	lastPos = tempPos;
 	acceleration = glm::vec3(0, 0, 0);	//resetting acceleration
 }

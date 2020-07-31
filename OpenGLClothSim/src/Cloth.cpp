@@ -165,10 +165,10 @@ void Cloth::initVBO_EBO_VAO()
 	GLCall(glBindVertexArray(VAO));
 
 	GLCall(glBindBuffer(GL_ARRAY_BUFFER, VBO));
-	GLCall(glBufferData(GL_ARRAY_BUFFER, particlesVBOf.size()*sizeof(VertexTex), &particlesVBOf[0], GL_DYNAMIC_DRAW));
+	GLCall(glBufferData(GL_ARRAY_BUFFER, particlesVBOf.size()*sizeof(VertexTex), &particlesVBOf[0], GL_STREAM_DRAW));
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, particlesEBO.size()*sizeof(VertexTex), &particlesEBO[0], GL_DYNAMIC_DRAW);
+	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO));
+	GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, particlesEBO.size()*sizeof(VertexTex), &particlesEBO[0], GL_DYNAMIC_DRAW));
 
 	GLCall(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0));
 	GLCall(glEnableVertexAttribArray(0));
@@ -196,7 +196,7 @@ void Cloth::updateVBOf()
 //A function to determine the positioning of every particle within the cloth.
 void Cloth::detPositioning(float timeStepSize) {
 	//first we need to satisfy the constraints in order to determine the positioning. 
-	for (int i = 0; i < 20; i++)
+	for (int i = 0; i < 15; i++)
 	{
 		for (std::vector<Constraint>::iterator constraint = constraints.begin(); constraint != constraints.end(); constraint++)
 		{
@@ -254,8 +254,8 @@ void Cloth::addWind(glm::vec3 direction)
 //Method called each frame
 void Cloth::drawCloth(float timeStepSize)
 {
-	addGravity(glm::vec3(0,-0.2,0)*timeStepSize); //addGravity: add gravity to every particle each frame, pointing down
-	addWind(glm::vec3(0.5,0,0.2)*timeStepSize); //addWind: generate some wind each frame
+	addGravity(glm::vec3(0,-0.0002,0)*timeStepSize); //addGravity: add gravity to every particle each frame, pointing down
+	//addWind(glm::vec3(0.005,0,0.2)*timeStepSize); //addWind: generate some wind each frame
 	detPositioning(timeStepSize); //Calculate the particle positions of the next frame, by resolving the constraints and time step of each particle
 
 	updateVBOf();
@@ -264,8 +264,8 @@ void Cloth::drawCloth(float timeStepSize)
 	GLCall(glBindTexture(GL_TEXTURE_2D, textureID));
 
 	GLCall(glBindVertexArray(VAO));
-	//GLCall(glBindBuffer(GL_ARRAY_BUFFER, VBO));
-	//GLCall(glBufferData(GL_ARRAY_BUFFER, particlesVBOf.size() * sizeof(VertexTex), &particlesVBOf[0], GL_DYNAMIC_DRAW));
+	GLCall(glBindBuffer(GL_ARRAY_BUFFER, VBO));
+	GLCall(glBufferData(GL_ARRAY_BUFFER, particlesVBOf.size() * sizeof(VertexTex), &particlesVBOf[0], GL_STREAM_DRAW));
 
 	GLCall(glDrawElements(GL_TRIANGLE_STRIP, particlesEBO.size(), GL_UNSIGNED_INT, 0 ));
 }
@@ -275,7 +275,6 @@ void Cloth::drawCloth(float timeStepSize)
 void Cloth::initTexture(std::string filename)
 {
 	bool textureLoaded = false;
-
 
 	ILuint imageID;
 	ilGenImages(1, &imageID);	//generate an image name
